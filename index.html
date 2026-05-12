@@ -91,12 +91,58 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-hei
 .sheet-btn:hover{color:var(--tx)}
 .sheet-btn.on{color:var(--ac);border-bottom-color:var(--ac)}
 
+/* Summary bar */
+.summary{display:flex;align-items:center;gap:1.5rem;padding:.6rem 1.5rem;background:var(--card);border-bottom:1px solid var(--brd);font-size:.78rem;color:var(--tx2);flex-wrap:wrap}
+.summary .s-item{display:flex;align-items:center;gap:.35rem}
+.summary .s-val{font-weight:700;color:var(--tx)}
+.summary .s-dot{width:8px;height:8px;border-radius:50%}
+
+/* Filter chips */
+.filters{display:flex;gap:.4rem;padding:.5rem 1.5rem;flex-wrap:wrap}
+.fchip{padding:.25rem .7rem;border-radius:20px;font-size:.72rem;font-weight:600;cursor:pointer;border:1px solid var(--brd);background:none;color:var(--tx2);font-family:inherit;transition:.2s}
+.fchip:hover{border-color:var(--ac);color:var(--tx)}
+.fchip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+
+/* Light mode */
+body.light{--bg:#f5f6fa;--card:#fff;--brd:#e2e4ea;--tx:#1a1d27;--tx2:#5a5e72}
+.theme-btn{background:none;border:1px solid var(--brd);color:var(--tx2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+.theme-btn:hover{border-color:var(--ac);color:var(--tx)}
+
+/* Embed loading state */
+.cc-embed{position:relative}
+.cc-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.cc-loading::after{content:'';width:20px;height:20px;border:2px solid var(--brd);border-top-color:var(--ac);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Day content count badge */
+.day .day-count{position:absolute;top:.4rem;right:.4rem;width:18px;height:18px;border-radius:50%;background:var(--ac);color:#fff;font-size:.55rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+
+/* Day scrollable if multiple contents */
+.day .day-contents{max-height:calc(100% - 1.5rem);overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--brd) transparent}
+
+/* Keyboard nav indicator */
+.day.key-focus{box-shadow:0 0 0 2px var(--ac);border-color:var(--ac)}
+
+/* Print */
+@media print{
+    .header,.sheet-bar,.filters,.summary{position:static!important}
+    .cc-embed iframe{display:none}
+    .cc-embed .cc-placeholder{display:flex!important}
+    .modal-bg{display:none!important}
+    body{background:#fff!important;color:#000!important}
+    .day{border:1px solid #ddd!important;break-inside:avoid}
+}
+
 @media(max-width:900px){
     .days{grid-template-columns:repeat(7,1fr);gap:4px}
     .day{min-height:120px;padding:.4rem}
     .cc-info .cc-title{font-size:.55rem}
     .week-grid{grid-template-columns:1fr;gap:6px}
     .week-col{min-height:auto}
+    .summary{padding:.4rem 1rem;gap:.8rem;font-size:.7rem}
+    .filters{padding:.4rem 1rem}
+    .header{flex-wrap:wrap;padding:.5rem .8rem;gap:.4rem}
+    .header h2{font-size:.85rem}
 }
     </style>
 </head>
@@ -127,10 +173,13 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-hei
                 <button class="on" id="vMonth">Mes</button>
                 <button id="vWeek">Semana</button>
             </div>
+            <button class="theme-btn" id="themeBtn"><i class="fas fa-sun"></i></button>
             <button class="new-btn" id="newFile"><i class="fas fa-plus"></i> Nuevo</button>
         </div>
     </div>
     <div class="sheet-bar" id="sheetBar"></div>
+    <div class="summary" id="summary"></div>
+    <div class="filters" id="filters"></div>
     <div id="calArea"></div>
 </div>
 
@@ -144,7 +193,7 @@ body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-hei
 <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
 <script>
 (function(){
-const S={sheets:{},sh:'',map:{},events:[],curDate:new Date(),view:'month'};
+const S={sheets:{},sh:'',map:{},events:[],curDate:new Date(),view:'month',filter:''};
 
 // Keywords for auto-detect
 const KW={date:['fecha','date','dia','inicio'],time:['hora','time','hora exacta'],title:['titulo','title','video','creativo','nombre'],
@@ -158,13 +207,24 @@ document.addEventListener('DOMContentLoaded',()=>{
     drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files.length)load(e.dataTransfer.files[0])});
     drop.addEventListener('click',()=>fi.click());
     fi.addEventListener('change',e=>{if(e.target.files.length)load(e.target.files[0])});
-    document.getElementById('prev').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()-1);render()});
-    document.getElementById('next').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()+1);render()});
+    document.getElementById('prev').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()-1);renderSummary();render()});
+    document.getElementById('next').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()+1);renderSummary();render()});
     document.getElementById('vMonth').addEventListener('click',()=>{S.view='month';document.getElementById('vMonth').classList.add('on');document.getElementById('vWeek').classList.remove('on');render()});
     document.getElementById('vWeek').addEventListener('click',()=>{S.view='week';document.getElementById('vWeek').classList.add('on');document.getElementById('vMonth').classList.remove('on');render()});
     document.getElementById('mClose').addEventListener('click',()=>document.getElementById('modalBg').classList.remove('show'));
     document.getElementById('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')e.target.classList.remove('show')});
     document.getElementById('newFile').addEventListener('click',()=>{document.getElementById('app').style.display='none';document.getElementById('upload').classList.remove('hide')});
+    document.getElementById('themeBtn').addEventListener('click',()=>{
+        document.body.classList.toggle('light');
+        document.getElementById('themeBtn').querySelector('i').className=document.body.classList.contains('light')?'fas fa-moon':'fas fa-sun';
+    });
+    // Keyboard nav
+    document.addEventListener('keydown',e=>{
+        if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA')return;
+        if(e.key==='ArrowLeft'){document.getElementById('prev').click();e.preventDefault()}
+        else if(e.key==='ArrowRight'){document.getElementById('next').click();e.preventDefault()}
+        else if(e.key==='Escape')document.getElementById('modalBg').classList.remove('show');
+    });
 });
 
 function load(file){
@@ -222,10 +282,9 @@ function pick(name){
             for(const kw of['url','link','enlace','fuente']){const i=lo.findIndex((h,idx)=>h.includes(kw)&&d.h[idx]!==S.map.url);
                 if(i!==-1){const alt=d.h[i],af=d.r.filter(r=>r[alt]&&String(r[alt]).match(/^https?:\/\//)).length;if(af>filled){S.map.url=alt;break}}}}}
     document.querySelectorAll('.sheet-btn').forEach(t=>t.classList.toggle('on',t.dataset.s===name));
-    buildEvents();
-    // Set calendar to first event month
+    buildEvents();S.filter='';
     if(S.events.length){const d=new Date(S.events[0].start);if(!isNaN(d))S.curDate=new Date(d.getFullYear(),d.getMonth(),1)}
-    render();
+    renderSummary();renderFilters();render();
 }
 
 function buildEvents(){
@@ -266,10 +325,13 @@ function render(){
     for(let i=0;i<firstDay;i++)h+='<div class="day empty"></div>';
     for(let d=1;d<=daysInMonth;d++){
         const dateStr=y+'-'+p(mo+1)+'-'+p(d);
-        const dayEvts=S.events.filter(e=>e.date===dateStr);
+        const dayEvts=getFiltered().filter(e=>e.date===dateStr);
         const isToday=dateStr===todayStr;
         h+='<div class="day'+(isToday?' today':'')+(dayEvts.length?' has-content':'')+'"><div class="dnum">'+d+'</div>';
+        if(dayEvts.length>1)h+='<span class="day-count">'+dayEvts.length+'</span>';
+        h+='<div class="day-contents">';
         dayEvts.forEach(ev=>{h+=contentCard(ev)});
+        h+='</div>';
         h+='</div>';
     }
     h+='</div></div>';
@@ -285,7 +347,7 @@ function renderWeek(el){
     for(let i=0;i<7;i++){
         const d=new Date(cur);d.setDate(d.getDate()+i);
         const dateStr=isoD(d);
-        const dayEvts=S.events.filter(e=>e.date===dateStr);
+        const dayEvts=getFiltered().filter(e=>e.date===dateStr);
         h+='<div class="week-col"><div class="week-col-head"><div class="wday">'+d.toLocaleDateString('es-MX',{weekday:'short'})+'</div><div class="wdate">'+d.getDate()+'</div></div>';
         dayEvts.forEach(ev=>{h+=contentCard(ev)});
         if(!dayEvts.length)h+='<div style="color:var(--tx2);font-size:.72rem;text-align:center;padding:2rem 0;opacity:.4">Sin contenido</div>';
@@ -332,6 +394,44 @@ function showModal(ev){
     if(ev.row){S.sheets[S.sh].h.forEach(col=>{if(mapped.has(col)||col.startsWith('_r_'))return;const v=ev.row[col];if(v)h+='<div class="mb-row"><span class="mb-label">'+esc(col)+'</span><span class="mb-val">'+esc(v)+'</span></div>'})}
     document.getElementById('mBody').innerHTML=h;
     document.getElementById('modalBg').classList.add('show');
+}
+
+// Summary bar
+function renderSummary(){
+    const el=document.getElementById('summary');if(!S.events.length){el.innerHTML='';return}
+    const y=S.curDate.getFullYear(),mo=S.curDate.getMonth();
+    const monthEvts=S.events.filter(e=>{const d=new Date(e.date+'T12:00:00');return d.getMonth()===mo&&d.getFullYear()===y});
+    const accts={};monthEvts.forEach(e=>{if(e.acct)accts[e.acct]=(accts[e.acct]||0)+1});
+    const days=new Set(monthEvts.map(e=>e.date)).size;
+    const igCount=monthEvts.filter(e=>e.igCode).length;
+    let h='<span class="s-item"><span class="s-val">'+monthEvts.length+'</span> contenidos este mes</span>';
+    h+='<span class="s-item"><span class="s-val">'+days+'</span> dias con contenido</span>';
+    h+='<span class="s-item"><span class="s-val">'+igCount+'</span> con preview IG</span>';
+    Object.entries(accts).forEach(([k,v])=>{
+        const col=k.toLowerCase().includes('a')?'var(--blu)':k.toLowerCase().includes('b')?'var(--pnk)':'var(--ac)';
+        h+='<span class="s-item"><span class="s-dot" style="background:'+col+'"></span>'+esc(k)+': <span class="s-val">'+v+'</span></span>';
+    });
+    el.innerHTML=h;
+}
+
+// Filter chips
+function renderFilters(){
+    const el=document.getElementById('filters');
+    const accts=[...new Set(S.events.map(e=>e.acct).filter(Boolean))];
+    if(accts.length<=1){el.innerHTML='';return}
+    let h='<button class="fchip'+(S.filter===''?' on':'')+'" data-f="">Todos</button>';
+    accts.forEach(a=>{h+='<button class="fchip'+(S.filter===a?' on':'')+'" data-f="'+esc(a)+'">'+esc(a)+'</button>'});
+    el.innerHTML=h;
+    el.querySelectorAll('.fchip').forEach(c=>c.addEventListener('click',()=>{
+        S.filter=c.dataset.f;
+        el.querySelectorAll('.fchip').forEach(x=>x.classList.toggle('on',x.dataset.f===S.filter));
+        render();
+    }));
+}
+
+function getFiltered(){
+    if(!S.filter)return S.events;
+    return S.events.filter(e=>e.acct===S.filter);
 }
 
 function isoD(d){return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
