@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendario de Contenido</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#0f1117;--card:#1a1d27;--brd:#2a2e3d;--tx:#e4e6ef;--tx2:#8b8fa3;--ac:#6366f1;--blu:#3b82f6;--pnk:#ec4899}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--tx);min-height:100vh}
+
+/* Upload */
+#upload{display:flex;min-height:100vh;align-items:center;justify-content:center}
+#upload.hide{display:none}
+.ubox{max-width:480px;width:100%;padding:2rem;text-align:center}
+.ubox h1{font-size:1.8rem;font-weight:800;margin-bottom:.3rem}
+.ubox p{color:var(--tx2);font-size:.9rem;margin-bottom:1.5rem}
+.drop{border:2px dashed var(--brd);border-radius:16px;padding:3rem 2rem;cursor:pointer;background:var(--card);transition:.2s}
+.drop.over{border-color:var(--ac);background:rgba(99,102,241,.06);transform:scale(1.02)}
+.drop i{font-size:2.5rem;color:var(--ac);display:block;margin-bottom:.8rem}
+.drop span{color:var(--tx2);font-size:.85rem}
+.fbtn{display:inline-block;padding:.5rem 1.3rem;background:var(--ac);color:#fff;border-radius:8px;cursor:pointer;font-weight:600;font-size:.85rem;margin-top:.8rem}
+
+/* Header */
+.header{display:flex;align-items:center;justify-content:space-between;padding:.8rem 1.5rem;background:var(--card);border-bottom:1px solid var(--brd);position:sticky;top:0;z-index:10}
+.header h2{font-size:1rem;font-weight:700}
+.nav{display:flex;align-items:center;gap:.5rem}
+.nav button{background:var(--bg);border:1px solid var(--brd);color:var(--tx2);width:34px;height:34px;border-radius:8px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;justify-content:center;transition:.2s}
+.nav button:hover{color:var(--tx);border-color:var(--ac)}
+.nav .month-label{font-size:1rem;font-weight:700;min-width:180px;text-align:center}
+.tabs{display:flex;gap:4px;background:var(--bg);border-radius:8px;padding:3px;margin-left:1rem}
+.tabs button{background:none;border:none;color:var(--tx2);padding:.35rem .8rem;border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:500;font-family:inherit}
+.tabs button.on{background:var(--ac);color:#fff}
+.new-btn{background:none;border:1px solid var(--brd);color:var(--tx2);padding:.35rem .8rem;border-radius:8px;cursor:pointer;font-family:inherit;font-size:.8rem}
+.new-btn:hover{border-color:var(--ac);color:var(--tx)}
+
+/* Calendar grid */
+.cal{padding:1rem 1rem 2rem}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:6px}
+.weekdays span{text-align:center;font-size:.72rem;font-weight:700;color:var(--tx2);text-transform:uppercase;padding:.4rem 0}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--card);border:1px solid var(--brd);border-radius:12px;min-height:160px;padding:.5rem;position:relative;transition:.2s}
+.day:hover{border-color:rgba(99,102,241,.3)}
+.day.empty{background:transparent;border-color:transparent;min-height:0}
+.day.today{border-color:var(--ac);box-shadow:0 0 0 1px var(--ac)}
+.day .dnum{font-size:.75rem;font-weight:700;color:var(--tx2);margin-bottom:.4rem}
+.day.today .dnum{color:var(--ac)}
+.day.has-content{border-color:rgba(99,102,241,.2);background:rgba(99,102,241,.03)}
+
+/* Content card inside day */
+.content-card{border-radius:8px;overflow:hidden;cursor:pointer;transition:.2s;margin-bottom:4px}
+.content-card:hover{transform:scale(1.02);box-shadow:0 4px 16px rgba(0,0,0,.3)}
+.cc-embed{width:100%;aspect-ratio:1;border-radius:8px;overflow:hidden;background:var(--bg);position:relative}
+.cc-embed iframe{width:100%;height:100%;border:none;pointer-events:none}
+.cc-embed .cc-placeholder{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;color:var(--tx2);font-size:.7rem;background:linear-gradient(135deg,var(--bg),var(--card))}
+.cc-embed .cc-placeholder i{font-size:1.5rem;opacity:.4}
+.cc-info{padding:.4rem .2rem .2rem;display:flex;align-items:center;gap:.3rem}
+.cc-info .cc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.cc-info .cc-dot.dot-a{background:var(--blu)}.cc-info .cc-dot.dot-b{background:var(--pnk)}.cc-info .cc-dot.dot-def{background:var(--ac)}
+.cc-info .cc-title{font-size:.6rem;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+.cc-info .cc-time{font-size:.58rem;color:var(--tx2);font-weight:500}
+
+/* Week view */
+.week-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px;padding:1rem}
+.week-col{background:var(--card);border:1px solid var(--brd);border-radius:12px;padding:.6rem;min-height:400px}
+.week-col-head{text-align:center;padding-bottom:.5rem;border-bottom:1px solid var(--brd);margin-bottom:.5rem}
+.week-col-head .wday{font-size:.7rem;font-weight:700;color:var(--tx2);text-transform:uppercase}
+.week-col-head .wdate{font-size:1.1rem;font-weight:800}
+.week-col .content-card{margin-bottom:8px}
+.week-col .cc-embed{aspect-ratio:4/5}
+
+/* Modal */
+.modal-bg{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);display:none;align-items:center;justify-content:center}
+.modal-bg.show{display:flex}
+.modal{background:var(--card);border:1px solid var(--brd);border-radius:16px;width:90%;max-width:500px;max-height:85vh;overflow-y:auto}
+.modal-head{display:flex;justify-content:space-between;align-items:center;padding:1rem 1.2rem;border-bottom:1px solid var(--brd)}
+.modal-head h3{font-size:1rem;font-weight:700}
+.modal-head button{width:30px;height:30px;border:none;background:var(--bg);color:var(--tx2);border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.modal-body{padding:1.2rem}
+.modal-body .mb-row{display:flex;gap:.8rem;margin-bottom:.6rem}
+.modal-body .mb-label{font-size:.7rem;font-weight:600;color:var(--tx2);text-transform:uppercase;min-width:70px;padding-top:2px}
+.modal-body .mb-val{font-size:.85rem;flex:1}
+.modal-body .mb-embed{margin-top:.8rem;border-radius:12px;overflow:hidden;border:1px solid var(--brd)}
+.modal-body .mb-embed iframe{width:100%;height:480px;border:none}
+
+/* Sheet tabs */
+.sheet-bar{display:flex;gap:0;overflow-x:auto;background:var(--bg);border-bottom:1px solid var(--brd);padding:0 1rem}
+.sheet-btn{padding:.5rem 1rem;font-size:.78rem;font-weight:500;color:var(--tx2);cursor:pointer;border:none;border-bottom:2px solid transparent;background:none;font-family:inherit;white-space:nowrap}
+.sheet-btn:hover{color:var(--tx)}
+.sheet-btn.on{color:var(--ac);border-bottom-color:var(--ac)}
+
+@media(max-width:900px){
+    .days{grid-template-columns:repeat(7,1fr);gap:4px}
+    .day{min-height:120px;padding:.4rem}
+    .cc-info .cc-title{font-size:.55rem}
+    .week-grid{grid-template-columns:1fr;gap:6px}
+    .week-col{min-height:auto}
+}
+    </style>
+</head>
+<body>
+
+<div id="upload">
+    <div class="ubox">
+        <h1>Calendario de Contenido</h1>
+        <p>Sube tu Excel y visualiza los contenidos por mes con previews</p>
+        <div class="drop" id="drop">
+            <i class="fas fa-cloud-upload-alt"></i>
+            <span>Arrastra tu Excel aqui o</span><br>
+            <label class="fbtn">Seleccionar archivo<input type="file" id="finput" accept=".xlsx,.xls,.csv" hidden></label>
+        </div>
+    </div>
+</div>
+
+<div id="app" style="display:none">
+    <div class="header">
+        <h2 id="fname"></h2>
+        <div class="nav">
+            <button id="prev"><i class="fas fa-chevron-left"></i></button>
+            <span class="month-label" id="monthLabel"></span>
+            <button id="next"><i class="fas fa-chevron-right"></i></button>
+        </div>
+        <div style="display:flex;align-items:center;gap:.5rem">
+            <div class="tabs">
+                <button class="on" id="vMonth">Mes</button>
+                <button id="vWeek">Semana</button>
+            </div>
+            <button class="new-btn" id="newFile"><i class="fas fa-plus"></i> Nuevo</button>
+        </div>
+    </div>
+    <div class="sheet-bar" id="sheetBar"></div>
+    <div id="calArea"></div>
+</div>
+
+<div class="modal-bg" id="modalBg">
+    <div class="modal">
+        <div class="modal-head"><h3 id="mTitle"></h3><button id="mClose"><i class="fas fa-times"></i></button></div>
+        <div class="modal-body" id="mBody"></div>
+    </div>
+</div>
+
+<script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+<script>
+(function(){
+const S={sheets:{},sh:'',map:{},events:[],curDate:new Date(),view:'month'};
+
+// Keywords for auto-detect
+const KW={date:['fecha','date','dia','inicio'],time:['hora','time','hora exacta'],title:['titulo','title','video','creativo','nombre'],
+    account:['cuenta','account','perfil'],url:['url','link','enlace','fuente'],notes:['notas','notes','comentarios'],
+    prob:['probabilidad','probability'],group:['grupo','group','similitud'],obj:['objetivo','objective','hipotesis']};
+
+document.addEventListener('DOMContentLoaded',()=>{
+    const drop=document.getElementById('drop'),fi=document.getElementById('finput');
+    drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});
+    drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+    drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');if(e.dataTransfer.files.length)load(e.dataTransfer.files[0])});
+    drop.addEventListener('click',()=>fi.click());
+    fi.addEventListener('change',e=>{if(e.target.files.length)load(e.target.files[0])});
+    document.getElementById('prev').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()-1);render()});
+    document.getElementById('next').addEventListener('click',()=>{S.curDate.setMonth(S.curDate.getMonth()+1);render()});
+    document.getElementById('vMonth').addEventListener('click',()=>{S.view='month';document.getElementById('vMonth').classList.add('on');document.getElementById('vWeek').classList.remove('on');render()});
+    document.getElementById('vWeek').addEventListener('click',()=>{S.view='week';document.getElementById('vWeek').classList.add('on');document.getElementById('vMonth').classList.remove('on');render()});
+    document.getElementById('mClose').addEventListener('click',()=>document.getElementById('modalBg').classList.remove('show'));
+    document.getElementById('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')e.target.classList.remove('show')});
+    document.getElementById('newFile').addEventListener('click',()=>{document.getElementById('app').style.display='none';document.getElementById('upload').classList.remove('hide')});
+});
+
+function load(file){
+    S.fn=file.name;
+    const r=new FileReader();
+    r.onload=e=>{
+        try{parse(e.target.result);document.getElementById('upload').classList.add('hide');document.getElementById('app').style.display='';document.getElementById('fname').textContent=S.fn;buildSheetTabs();
+            let best='',bs=0;Object.entries(S.sheets).forEach(([n,d])=>{const m=autoMap(d.h);const s=(m.date?d.r.length*2:0)+d.r.length;if(s>bs){bs=s;best=n}});
+            if(!best)best=Object.keys(S.sheets)[0];pick(best);
+        }catch(err){alert('Error: '+err.message)}
+    };
+    r.readAsArrayBuffer(file);
+}
+
+function parse(buf){
+    const wb=XLSX.read(buf,{type:'array',cellDates:true});S.sheets={};
+    wb.SheetNames.forEach(name=>{
+        const ws=wb.Sheets[name];
+        const j=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:false,dateNF:'yyyy-mm-dd'});
+        const rj=XLSX.utils.sheet_to_json(ws,{header:1,defval:'',raw:true});
+        if(j.length<2){S.sheets[name]={h:[],r:[]};return}
+        let hi=0;for(let i=0;i<Math.min(5,j.length);i++){if(j[i].filter(c=>c!==''&&c!=null).length>=3){hi=i;break}}
+        const h=j[hi].map(c=>c!=null?String(c).trim():'');
+        const rows=[];
+        for(let i=hi+1;i<j.length;i++){
+            if(j[i].every(c=>c===''||c==null))continue;
+            const o={};h.forEach((col,ci)=>{o[col]=j[i][ci]!=null?String(j[i][ci]).trim():'';o['_r_'+col]=rj[i]?rj[i][ci]:null});
+            rows.push(o);
+        }
+        S.sheets[name]={h,r:rows};
+    });
+}
+
+function autoMap(headers){
+    const m={},lo=headers.map(h=>h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+    function f(kws){for(const k of kws){const i=lo.findIndex((h,idx)=>{if(Object.values(m).includes(headers[idx]))return false;return h.includes(k)});if(i!==-1)return headers[i]}return ''}
+    Object.keys(KW).forEach(k=>m[k]=f(KW[k]));
+    return m;
+}
+
+function buildSheetTabs(){
+    const el=document.getElementById('sheetBar');el.innerHTML='';
+    Object.entries(S.sheets).forEach(([n,d])=>{
+        const b=document.createElement('button');b.className='sheet-btn';b.dataset.s=n;
+        b.textContent=n+' ('+d.r.length+')';
+        b.addEventListener('click',()=>pick(n));el.appendChild(b);
+    });
+}
+
+function pick(name){
+    S.sh=name;S.map=autoMap(S.sheets[name].h);
+    // Fix URL column if mostly empty
+    if(S.map.url){const d=S.sheets[name],filled=d.r.filter(r=>r[S.map.url]&&String(r[S.map.url]).match(/^https?:\/\//)).length;
+        if(filled<d.r.length*.3){const lo=d.h.map(h=>h.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''));
+            for(const kw of['url','link','enlace','fuente']){const i=lo.findIndex((h,idx)=>h.includes(kw)&&d.h[idx]!==S.map.url);
+                if(i!==-1){const alt=d.h[i],af=d.r.filter(r=>r[alt]&&String(r[alt]).match(/^https?:\/\//)).length;if(af>filled){S.map.url=alt;break}}}}}
+    document.querySelectorAll('.sheet-btn').forEach(t=>t.classList.toggle('on',t.dataset.s===name));
+    buildEvents();
+    // Set calendar to first event month
+    if(S.events.length){const d=new Date(S.events[0].start);if(!isNaN(d))S.curDate=new Date(d.getFullYear(),d.getMonth(),1)}
+    render();
+}
+
+function buildEvents(){
+    const d=S.sheets[S.sh],m=S.map;S.events=[];
+    if(!m.date)return;
+    d.r.forEach((row,i)=>{
+        const dv=row[m.date],rv=row['_r_'+m.date];if(!dv)return;
+        let dd=null;
+        if(rv instanceof Date&&!isNaN(rv))dd=isoD(rv);
+        else if(typeof rv==='number'&&rv>30000&&rv<70000)dd=isoD(new Date(Math.floor(rv-25569)*864e5));
+        else if(typeof dv==='string'){let mt=dv.match(/(\d{4})-(\d{1,2})-(\d{1,2})/);if(mt)dd=mt[1]+'-'+p(mt[2])+'-'+p(mt[3]);
+            else{mt=dv.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})/);if(mt)dd=mt[3]+'-'+p(mt[2])+'-'+p(mt[1])}}
+        if(!dd)return;
+        let st=dd,tm='';
+        if(m.time&&row[m.time]){const mt=String(row[m.time]).match(/(\d{1,2}):(\d{2})/);if(mt){tm=p(mt[1])+':'+mt[2];st=dd+'T'+tm+':00'}}
+        const url=m.url?row[m.url]:'';
+        const igM=url.match(/instagram\.com\/(p|reels?|reel)\/([A-Za-z0-9_-]+)/);
+        const acct=(m.account?row[m.account]:'').toLowerCase();
+        S.events.push({date:dd,start:st,time:tm,title:m.title?row[m.title]:'Evento '+(i+1),
+            url,igCode:igM?igM[2]:null,igType:igM?igM[1]:null,
+            acct:m.account?row[m.account]:'',acctKey:acct.includes('a')?'a':acct.includes('b')?'b':'def',
+            prob:m.prob?row[m.prob]:'',group:m.group?row[m.group]:'',obj:m.obj?row[m.obj]:'',
+            notes:m.notes?row[m.notes]:'',row});
+    });
+}
+
+function render(){
+    const el=document.getElementById('calArea');
+    const y=S.curDate.getFullYear(),mo=S.curDate.getMonth();
+    document.getElementById('monthLabel').textContent=S.curDate.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
+    if(S.view==='week'){renderWeek(el);return}
+    // Month view
+    const firstDay=(new Date(y,mo,1).getDay()+6)%7;// Mon=0
+    const daysInMonth=new Date(y,mo+1,0).getDate();
+    const todayStr=isoD(new Date());
+    let h='<div class="cal"><div class="weekdays"><span>Lun</span><span>Mar</span><span>Mie</span><span>Jue</span><span>Vie</span><span>Sab</span><span>Dom</span></div><div class="days">';
+    // Empty cells
+    for(let i=0;i<firstDay;i++)h+='<div class="day empty"></div>';
+    for(let d=1;d<=daysInMonth;d++){
+        const dateStr=y+'-'+p(mo+1)+'-'+p(d);
+        const dayEvts=S.events.filter(e=>e.date===dateStr);
+        const isToday=dateStr===todayStr;
+        h+='<div class="day'+(isToday?' today':'')+(dayEvts.length?' has-content':'')+'"><div class="dnum">'+d+'</div>';
+        dayEvts.forEach(ev=>{h+=contentCard(ev)});
+        h+='</div>';
+    }
+    h+='</div></div>';
+    el.innerHTML=h;
+    bindCards();
+}
+
+function renderWeek(el){
+    const cur=new Date(S.curDate);
+    const dow=(cur.getDay()+6)%7;
+    cur.setDate(cur.getDate()-dow);// Go to Monday
+    let h='<div class="week-grid">';
+    for(let i=0;i<7;i++){
+        const d=new Date(cur);d.setDate(d.getDate()+i);
+        const dateStr=isoD(d);
+        const dayEvts=S.events.filter(e=>e.date===dateStr);
+        h+='<div class="week-col"><div class="week-col-head"><div class="wday">'+d.toLocaleDateString('es-MX',{weekday:'short'})+'</div><div class="wdate">'+d.getDate()+'</div></div>';
+        dayEvts.forEach(ev=>{h+=contentCard(ev)});
+        if(!dayEvts.length)h+='<div style="color:var(--tx2);font-size:.72rem;text-align:center;padding:2rem 0;opacity:.4">Sin contenido</div>';
+        h+='</div>';
+    }
+    h+='</div>';el.innerHTML=h;bindCards();
+}
+
+function contentCard(ev){
+    let embed='';
+    if(ev.igCode){
+        embed='<iframe src="https://www.instagram.com/'+ev.igType+'/'+ev.igCode+'/embed/captioned/" loading="lazy" scrolling="no"></iframe>';
+    }else if(ev.url&&ev.url.match(/^https?:\/\//)){
+        const platform=ev.url.includes('facebook')?'Facebook':ev.url.includes('tiktok')?'TikTok':'Web';
+        embed='<div class="cc-placeholder"><i class="fas '+(platform==='Facebook'?'fa-facebook':'fa-link')+'"></i><span>'+esc(platform)+'</span></div>';
+    }else{
+        embed='<div class="cc-placeholder"><i class="fas fa-video"></i><span>'+esc(ev.title.slice(0,20))+'</span></div>';
+    }
+    return '<div class="content-card" data-date="'+ev.date+'" data-title="'+esc(ev.title)+'"><div class="cc-embed">'+embed+'</div><div class="cc-info"><span class="cc-dot dot-'+ev.acctKey+'"></span><span class="cc-title">'+esc(ev.title)+'</span><span class="cc-time">'+ev.time+'</span></div></div>';
+}
+
+function bindCards(){
+    document.querySelectorAll('.content-card').forEach(c=>c.addEventListener('click',()=>{
+        const ev=S.events.find(e=>e.date===c.dataset.date&&e.title===c.dataset.title.replace(/&amp;/g,'&').replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/&quot;/g,'"'));
+        if(ev)showModal(ev);
+    }));
+}
+
+function showModal(ev){
+    document.getElementById('mTitle').textContent=ev.title;
+    const d=new Date(ev.start);
+    let h='';
+    h+='<div class="mb-row"><span class="mb-label">Fecha</span><span class="mb-val">'+(isNaN(d)?ev.date:d.toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}))+'</span></div>';
+    if(ev.time)h+='<div class="mb-row"><span class="mb-label">Hora</span><span class="mb-val">'+ev.time+'</span></div>';
+    if(ev.acct)h+='<div class="mb-row"><span class="mb-label">Cuenta</span><span class="mb-val">'+esc(ev.acct)+'</span></div>';
+    if(ev.prob)h+='<div class="mb-row"><span class="mb-label">Prob.</span><span class="mb-val">'+esc(ev.prob)+'</span></div>';
+    if(ev.group)h+='<div class="mb-row"><span class="mb-label">Grupo</span><span class="mb-val">'+esc(ev.group)+'</span></div>';
+    if(ev.obj)h+='<div class="mb-row"><span class="mb-label">Objetivo</span><span class="mb-val">'+esc(ev.obj)+'</span></div>';
+    if(ev.notes)h+='<div class="mb-row"><span class="mb-label">Notas</span><span class="mb-val">'+esc(ev.notes)+'</span></div>';
+    if(ev.url)h+='<div class="mb-row"><span class="mb-label">URL</span><span class="mb-val"><a href="'+esc(ev.url)+'" target="_blank" style="color:var(--ac)">'+esc(ev.url)+'</a></span></div>';
+    if(ev.igCode)h+='<div class="mb-embed"><iframe src="https://www.instagram.com/'+ev.igType+'/'+ev.igCode+'/embed/captioned/" loading="lazy"></iframe></div>';
+    // Show extra fields
+    const mapped=new Set(Object.values(S.map).filter(Boolean));
+    if(ev.row){S.sheets[S.sh].h.forEach(col=>{if(mapped.has(col)||col.startsWith('_r_'))return;const v=ev.row[col];if(v)h+='<div class="mb-row"><span class="mb-label">'+esc(col)+'</span><span class="mb-val">'+esc(v)+'</span></div>'})}
+    document.getElementById('mBody').innerHTML=h;
+    document.getElementById('modalBg').classList.add('show');
+}
+
+function isoD(d){return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())}
+function p(n){return String(n).padStart(2,'0')}
+function esc(s){return s?String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'):''}
+})();
+</script>
+</body>
+</html>
